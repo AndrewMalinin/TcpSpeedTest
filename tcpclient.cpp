@@ -5,19 +5,21 @@ TcpClient::TcpClient(QObject *parent) : QObject(parent)
 
     _socket = new QTcpSocket(this);
 
-    _oneSecTimer->setInterval(1000);
-    _bigTimer->setInterval(_bigTimerPeriod_ms);
-    connect(_oneSecTimer, &QTimer::timeout, this, &TcpClient::handleOneSecTimerTriggered);
-
     if(nullptr != _socket)
     {
         connectToServer();
     }
 }
 
+TcpClient::~TcpClient()
+{
+    delete _socket;
+    delete _bigTimer;
+}
+
 void TcpClient::connectToServer()
 {
-    if(nullptr != _socket)
+    if(nullptr == _socket)
     {
         return;
     }
@@ -28,7 +30,7 @@ void TcpClient::connectToServer()
     {
         return;
     }
-
+    qDebug() << "> Connecting...";
     _socket->connectToHost(_serverIp, _serverPort);
     connect(_socket, &QTcpSocket::connected,
             this, &TcpClient::handleConnectedToServer);
@@ -38,11 +40,11 @@ void TcpClient::connectToServer()
             this, &TcpClient::handleDisconnectedFromServer);
     connect(_socket, QOverload<QAbstractSocket::SocketError>::of(&QTcpSocket::error),
             this, &TcpClient::handleSocketError);
-
 }
+
 void TcpClient::disconnectFromServer()
 {
-    if(nullptr != _socket)
+    if(nullptr == _socket)
     {
         _socket->disconnectFromHost();
         // Обрываем связи сигналов и слотов
@@ -50,9 +52,31 @@ void TcpClient::disconnectFromServer()
     }
 }
 
+void TcpClient::handleConnectedToServer()
+{   qDebug() << "> Connected!";
+    _bigTimer->setInterval(_bigTimerPeriod_ms);
+    connect(_bigTimer, &QTimer::timeout, this, &TcpClient::handleBigTimerTriggered);
+    _bigTimer->start();
+    QTimer::singleShot(1000, this, &TcpClient::handleOneSecTimerTriggered);
+}
+
+void TcpClient::handleDisconnectedFromServer()
+{
+    qDebug() << "> Disconnect from server!";
+    _socket->disconnect();
+    _bigTimer->disconnect();
+}
+
+void TcpClient::handleSocketError(QAbstractSocket::SocketError sockErr)
+{
+    qDebug() << "> Connection error!:" << sockErr;
+    handleDisconnectedFromServer();
+}
+
+
 void TcpClient::handleReadyRead()
 {
-    if(nullptr != _socket)
+    if(nullptr == _socket)
     {
         return;
     }
@@ -66,9 +90,23 @@ void TcpClient::handleReadyRead()
 
 void TcpClient::handleOneSecTimerTriggered()
 {
-
-
-    _lastOneSecTimerSpeed =
+    _lastOneSecTimerSpeed = _oneSecTimerDataCounter;
     _oneSecTimerDataCounter = 0;
     viewUpdate();
+    if (QAbstractSocket::ConnectedState  == _socket->state())
+        QTimer::singleShot(1000, this, &TcpClient::handleOneSecTimerTriggered);
+}
+
+void TcpClient::handleBigTimerTriggered()
+{
+    viewUpdate();
+}
+
+void TcpClient::viewUpdate()
+{
+    if      (PLATFORM  == 2)
+        QProcess::execute("cmd /c cls");
+    else if (PLATFORM  == 1)
+        QProcess::execute("clear");
+    qDebug().noquote() << QString("Speed per second: %1;  Mean Speed per second: %2").arg(_lastOneSecTimerSpeed).arg(_lastBigTimerSpeed);
 }

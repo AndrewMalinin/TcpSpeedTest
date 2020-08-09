@@ -1,9 +1,12 @@
 #include <QCoreApplication>
-#include <QDebug>
-#include <QProcess>
+#include "tcpclient.h"
+
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
-    QProcess::execute("clear");
+
+    qDebug() << "> Client starting...";
+    TcpClient* tcpClient = new TcpClient();
+    qDebug() << "> Client is started!";
     return a.exec();
 }
