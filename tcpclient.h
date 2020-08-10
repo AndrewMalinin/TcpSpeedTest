@@ -9,7 +9,8 @@
 #include <QProcess>
 
 
-#define PLATFORM ( 2 )  // 1 = "linux" or  2 = "windows"
+#define PLATFORM ( 1 )  // 1 = "linux" or  2 = "windows"
+#define PACKET_HEADER_LENGTH (6); //bytes
 
 class TcpClient : public QObject
 {
@@ -37,20 +38,21 @@ private slots:
     void handleBigTimerTriggered();
 private:
 
-    QHostAddress _serverIp      = QHostAddress(QString("127.0.0.1"));
+    QHostAddress _serverIp      = QHostAddress(QString("172.16.25.10"));
     quint16      _serverPort    = 6000;
 
-    quint32  _oneSecTimerDataCounter    = 0;
-    quint32  _bigTimerDataCounter       = 0;
+    qint32  _oneSecTimerDataCounter    = 0;
+    qint32  _bigTimerDataCounter       = 0;
+    qint32  _maxSpeed                  = 0;
 
-    quint32 _lastOneSecTimerSpeed       = -1;
-    quint32 _lastBigTimerSpeed          = -1;
+    qint32 _lastOneSecTimerSpeed       = 0;
+    qint32 _lastBigTimerSpeed          = 0;
 
     QTcpSocket* _socket     = nullptr;
 
     QTimer*  _bigTimer      = nullptr;
 
-    quint32 _bigTimerPeriod_ms = 2000;
+    quint32 _bigTimerPeriod_ms = 10000;
 };
 
 #endif // TCPCLIENT_H

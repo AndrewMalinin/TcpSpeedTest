@@ -27,3 +27,6 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 HEADERS += \
     tcpclient.h
+
+MOC_DIR = $$PWD/moc
+OBJECTS_DIR = $$PWD/obj

@@ -4,7 +4,7 @@ TcpClient::TcpClient(QObject *parent) : QObject(parent)
 {
 
     _socket = new QTcpSocket(this);
-
+    _bigTimer = new QTimer(this);
     if(nullptr != _socket)
     {
         connectToServer();
@@ -82,7 +82,7 @@ void TcpClient::handleReadyRead()
     }
 
     QByteArray receivedData = _socket->readAll();
-    quint32 receivedDataLength = receivedData.length();
+    quint32 receivedDataLength = receivedData.size() - PACKET_HEADER_LENGTH;
 
     _oneSecTimerDataCounter += receivedDataLength;
     _bigTimerDataCounter    += receivedDataLength;
@@ -91,6 +91,10 @@ void TcpClient::handleReadyRead()
 void TcpClient::handleOneSecTimerTriggered()
 {
     _lastOneSecTimerSpeed = _oneSecTimerDataCounter;
+
+    if(_maxSpeed < _oneSecTimerDataCounter)
+        _maxSpeed = _oneSecTimerDataCounter;
+
     _oneSecTimerDataCounter = 0;
     viewUpdate();
     if (QAbstractSocket::ConnectedState  == _socket->state())
@@ -99,6 +103,12 @@ void TcpClient::handleOneSecTimerTriggered()
 
 void TcpClient::handleBigTimerTriggered()
 {
+    _lastBigTimerSpeed = _bigTimerDataCounter / (_bigTimerPeriod_ms/1000.0);
+
+    if(_maxSpeed < _lastBigTimerSpeed)
+        _maxSpeed = _lastBigTimerSpeed;
+
+    _bigTimerDataCounter = 0;
     viewUpdate();
 }
 
@@ -108,5 +118,10 @@ void TcpClient::viewUpdate()
         QProcess::execute("cmd /c cls");
     else if (PLATFORM  == 1)
         QProcess::execute("clear");
-    qDebug().noquote() << QString("Speed per second: %1;  Mean Speed per second: %2").arg(_lastOneSecTimerSpeed).arg(_lastBigTimerSpeed);
+
+    qDebug().noquote() << QString("Data channel Width:\nInstant:\t %1\tKBits/s \nMean:\t\t %2\tKBits/s \n"
+                                  "Max Speed:\t %3\tKBits/s")
+                          .arg(_lastOneSecTimerSpeed*8/1024.0)
+                          .arg(_lastBigTimerSpeed*8/1024.0)
+                          .arg( QString::number(8*(_maxSpeed/1024.0)));
 }
